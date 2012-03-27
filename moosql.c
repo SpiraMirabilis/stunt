@@ -698,7 +698,7 @@ bf_mysql_connect(Var arglist, Byte next, void *vdata, Objid progr) {
     index = connection_array_index();
     if (index == -1)
         return make_error_pack(E_QUOTA);
-    wrapper = do_mysql_connect(hostname, username, password, dbname, port, NULL, CLIENT_MULTI_STATEMENTS, error_string);
+    wrapper = do_mysql_connect(hostname, username, password, dbname, port, NULL, 0, error_string);
     if (wrapper == NULL || wrapper->conn == NULL) {
         /* an error happened in the connect, return that as a STR */
         r.type = TYPE_STR;
