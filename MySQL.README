@@ -1,0 +1,61 @@
+MOOSQL is a patch that extends the Lambda MOO server to serve as a client to a MySQL server.
+This version of the patch has been designed to work with the Stunt fork of the LambdaMOO server written by Todd Sundsted.
+This patch represents the skeleton built-in functions necessary to write a useful MySQL object or frob for your MOO.
+This patch adds an additional 7 built-in functions to the MOO, they are detailed below.
+
+
+	* mysql_connect(STR host, INT port, STR username, STR password, STR database)
+		This function will attempt to connect to the MySQL server and database specified above with the specified credentials. If successful
+		it will return a negative object number starting at #-2 unique for this specific connection. If unsuccessful it will return a string that describes
+		the failure.
+			Note: To use the default port for MySQL, port should be a zero.
+
+	* mysql_status(OBJ mysqlConnection)
+		This function will return a dictionary (MAP type) of various status and settable options for the specified MySQL connection. If no active MySQL
+		connection exists which is associated with the specified object number E_INVARG will be raised. An example of the format of this function is below.
+			["auto-json" -> "yes", "connect_time" -> 1332833752, "convert-types" -> "yes", "database" -> "myDatabase", "hostname" -> "localhost", 
+			"json-mode" -> "embedded-types", "last_query_time" -> 1332833752, "port" -> "default", "row-type" -> "value-list", "server_version" -> 50161, "username" -> "root"]
+
+	* mysql_query(OBJ mysqlConnection, STR SQLQuery)
+		This function sends a query to the specified MySQL connection. If no connection exists at the specified object number E_INVARG will be raised. 
+		Only one query can be run at a time per connection. If you attempt to run a query without finalizing a previous query on this connection then E_QUOTA will
+		be raised. If you SQL query has an error of syntax, or there is another reason the query fails it will return a string prefixed with "ERR:" followed by a description
+		of the error. If your query does not return results, it will return a string with the syntax "X rows affected." If your SQL query would return results, but there are none
+		then E_NONE is returned. Otherwise, an integer which is the number of result rows the query returned is returned.
+
+	* mysql_next_row(OBJ mysqlConnection)
+		This function returns the next row available, after using a mysql_query() which has returned results. If no connection exists at the specified object number E_INVARG
+		will be raised. If there is no more rows, 0 is returned. Otherwise a row is returned in either a format of a key-value pair dictionary (MAP datatype) or a list of values,
+		depending on what option you have set.
+
+	* mysql_field_names(OBJ mysqlConnection)
+		This function returns a list of field names (in order), after using a mysql_query() which has returned results. If no connection exists at the specified object number E_INVARG
+		will be raised. If there is no active query then E_NONE will be returned.
+
+	* mysql_close(OBJ mysqlConnection)
+		This function will close a MySQL connection and free the memory associated with it. If no connection exists at the specified object number 0 will be returned, otherwise
+		1 will be returned.
+
+	* mysql_set_options(OBJ mysqlConnection, MAP options)
+		This function will set options for the specified MySQL connection.  If no connection exists at the specified object number E_INVARG will be raised.  The options are
+		a key-value dictionary (MAP type) and the four settable options are described below:
+
+			* auto-json ["no", "yes"] - DEFAULT: no
+					If set to yes, the MOO will attempt to automatically parse MySQL results into json in the same way the built in
+					parse_json() function does. This parsing will only occur on MySQL fields that are TEXT or BLOBs.
+
+			* json-mode ["embedded-types", "common-subset"] DEFAULT: embedded-types
+					The json mode the MOO will use. See the help file for parse_json() for more details.
+
+			* convert-types ["yes", "no"] - DEFAULT yes
+					Whether or not to attempt to automatically convert numeric fields into MOO types. If "no" then these fields will return as strings.
+					If there is an error in the conversion, the field will return as a string.
+
+			* row-type ["key-value-pair", "value-list"] - DEFAULT key-value-pair
+					If the row-type is set to key-value-pair, results returned in the mysql_next_row() function will return as a paired dictionary. If it is set to "value list"
+					then only the values will be returned (in order, in a list.)
+
+		Additionally, it is possible to "overload" the default options listed above if you create a property on $server_options.default_mysql_options and it is a MAP that is in the same format as you
+		would send to mysql_set_options().
+		
+		

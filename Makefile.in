@@ -16,6 +16,9 @@
 CC = @CC@
 LIBRARIES = @LIBS@
 YACC = @YACC@
+# i dont know how to use autoconf so this will work for now
+MYSQLLIBS=-L/usr/lib/mysql -lmysqlclient
+MYSQLINC=-I/usr/include/mysql
 
 CFLAGS = -O
 # If you're using GCC, you may prefer:
@@ -45,7 +48,7 @@ CSRCS = ast.c base64.c code_gen.c collection.c db_file.c db_io.c \
 	str_intern.c sym_table.c tasks.c timers.c unparse.c utils.c \
 	verbs.c version.c yajl.c yajl_alloc.c yajl_buf.c \
 	yajl_encode.c yajl_gen.c yajl_lex.c yajl_parser.c \
-	yajl_version.c extension-fileio.c
+	yajl_version.c extension-fileio.c moosql.c
 
 OPT_NET_SRCS = net_single.c net_multi.c \
 	net_mp_selct.c net_mp_poll.c net_mp_fake.c \
@@ -95,7 +98,10 @@ YOBJS = $(YSRCS:.y=.o)
 OBJS = $(COBJS) $(YOBJS)
 
 moo:	$(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) $(LIBRARIES) -o $@
+	$(CC) $(CFLAGS) $(OBJS) $(MYSQLLIBS) $(MYSQLINC) $(LIBRARIES) -o $@
+
+moosql.o: moosql.c moosql.h
+	$(CC) -g -O $(MYSQLLIBS) $(MYSQLINC) -c -o $@ moosql.c
 
 pure_moo: moo
 	purify $(CC) $(CFLAGS) $(OBJS) $(LIBRARIES) -o $@
