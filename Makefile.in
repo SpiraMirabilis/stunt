@@ -19,8 +19,11 @@ CCAS = @CCAS@
 LIBRARIES = @LIBS@
 YACC = @YACC@
 
+MYSQLLIBS=-L/usr/lib/mysql -lmysqlclient
+MYSQLINC=-I/usr/include/mysql
+
 CFLAGS = -g -O -Wall
-CXXFLAGS = -g -O -Wall
+CXXFLAGS = -g -O -Wall -Wno-narrowing
 # If you're using GCC, you may prefer:
 # CFLAGS = -O2 -finline-functions
 #
@@ -64,7 +67,7 @@ CXXSRCS = ast.cc base64.cc code_gen.cc collection.cc crypto.cc \
 	net_proto.cc numbers.cc objects.cc parse_cmd.cc pattern.cc \
 	program.cc property.cc quota.cc server.cc storage.cc \
 	streams.cc str_intern.cc sym_table.cc system.cc tasks.cc \
-	timers.cc unparse.cc utils.cc verbs.cc version.cc
+	timers.cc unparse.cc utils.cc verbs.cc version.cc moosql.cc
 
 OPT_NET_SRCS = net_single.cc net_multi.cc net_mp_selct.cc \
 	net_mp_poll.cc net_mp_fake.cc net_tcp.cc net_bsd_tcp.cc \
@@ -118,7 +121,10 @@ YOBJS = $(YSRCS:.y=.o)
 OBJS = $(COBJS) $(CXXOBJS) $(YOBJS) x86.o
 
 moo:	$(OBJS)
-	$(CXX) $(CFLAGS) $(OBJS) $(LIBRARIES) -o $@
+	$(CXX) $(CFLAGS) $(OBJS) $(MYSQLLIBS) $(MYSQLINC) $(LIBRARIES) -o $@
+
+moosql.o: moosql.cc moosql.h
+	$(CXX) -std=c++11 -g -O $(MYSQLLIBS) $(MYSQLINC) -c -o $@ moosql.cc
 
 x86.o: x86.S
 	$(CCAS) $(ASFLAGS) x86.S

@@ -47,6 +47,7 @@ AC_PROG_CC_STDC
 AC_HEADER_CHECK(sys/bsdtypes.h, AC_DEFINE(NEED_BSDTYPES_H))
 AC_HEADER_CHECK(sys/select.h, AC_DEFINE(NEED_SELECT_H))
 AC_HEADER_CHECK(memory.h, AC_DEFINE(NEED_MEMORY_H))
+AC_CHECK_HEADER(mysql/mysql.h, AC_DEFINE(HAVE_MYSQL_MYSQL_H),AC_MSG_ERROR([*** Please install MySQL dev packages if you want to compile MySQL into the MOO. For Ubuntu/Debian this is libmysqlclient-dev ***]))
 AC_PID_T
 AC_MODE_T
 AC_SIZE_T

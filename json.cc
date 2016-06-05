@@ -28,7 +28,6 @@
  *****************************************************************************/
 
 #include <stdio.h>
-#include <errno.h>
 
 #include "my-string.h"
 #include "my-stdlib.h"
@@ -43,9 +42,6 @@
 #include "streams.h"
 #include "unparse.h"
 #include "utils.h"
-#include "yajl_gen.h"
-#include "yajl_lex.h"
-#include "yajl_parse.h"
 
 /*
   Handle many modes of mapping between JSON and internal MOO types.
@@ -77,13 +73,8 @@
   Mode 1 is useful for serializing/deserializing MOO types.
  */
 
-struct stack_item {
-    struct stack_item *prev;
-    Var v;
-};
 
-static void
-push(struct stack_item **top, Var v)
+void json_push(struct stack_item **top, Var v)
 {
     struct stack_item *item = (struct stack_item *)malloc(sizeof(struct stack_item));
     item->prev = *top;
@@ -91,8 +82,7 @@ push(struct stack_item **top, Var v)
     *top = item;
 }
 
-static Var
-pop(struct stack_item **top)
+Var json_pop(struct stack_item **top)
 {
     struct stack_item *item = *top;
     *top = item->prev;
@@ -101,26 +91,6 @@ pop(struct stack_item **top)
     return v;
 }
 
-#define PUSH(top, v) push(&(top), v)
-
-#define POP(top) pop(&(top))
-
-typedef enum {
-    MODE_COMMON_SUBSET, MODE_EMBEDDED_TYPES
-} mode_type;
-
-struct parse_context {
-    struct stack_item stack;
-    struct stack_item *top;
-    mode_type mode;
-};
-
-struct generate_context {
-    mode_type mode;
-};
-
-#define ARRAY_SENTINEL -1
-#define MAP_SENTINEL -2
 
 static const char *
 value_to_literal(Var v)
@@ -187,8 +157,8 @@ append_type(const char *str, var_type type)
     return reset_stream(stream);
 }
 
-static int
-handle_null(void *ctx)
+int
+json_handle_null(void *ctx)
 {
     struct parse_context *pctx = (struct parse_context *)ctx;
     Var v;
@@ -198,8 +168,8 @@ handle_null(void *ctx)
     return 1;
 }
 
-static int
-handle_boolean(void *ctx, int boolean)
+int
+json_handle_boolean(void *ctx, int boolean)
 {
     struct parse_context *pctx = (struct parse_context *)ctx;
     Var v;
@@ -209,42 +179,28 @@ handle_boolean(void *ctx, int boolean)
     return 1;
 }
 
-static int
-handle_number(void *ctx, const char *numberVal, unsigned int numberLen, yajl_tok tok)
+int
+json_handle_integer(void *ctx, long integerVal)
 {
     struct parse_context *pctx = (struct parse_context *)ctx;
     Var v;
-
-    if (yajl_tok_integer == tok) {
-
-	long int i = 0;
-
-	errno = 0;
-	i = strtol(numberVal, NULL, 10);
-
-	if (0 == errno && (i >= MININT && i <= MAXINT)) {
-	    v = new_int(i);
-	    PUSH(pctx->top, v);
-	    return 1;
-        }
-    }
-
-    double d = 0.0;
-
-    errno = 0;
-    d = strtod(numberVal, NULL);
-
-    if (0 == errno) {
-	v = new_float(d);
-	PUSH(pctx->top, v);
-	return 1;
-    }
-
-    return 0;
+    v = new_int((int)integerVal);
+    PUSH(pctx->top, v);
+    return 1;
 }
 
-static int
-handle_string(void *ctx, const unsigned char *stringVal, unsigned int stringLen)
+int
+json_handle_float(void *ctx, double doubleVal)
+{
+    struct parse_context *pctx = (struct parse_context *)ctx;
+    Var v;
+    v = new_float(doubleVal);
+    PUSH(pctx->top, v);
+    return 1;
+}
+
+int
+json_handle_string(void *ctx, const unsigned char *stringVal, unsigned int stringLen)
 {
     struct parse_context *pctx = (struct parse_context *)ctx;
     var_type type;
@@ -297,7 +253,7 @@ handle_string(void *ctx, const unsigned char *stringVal, unsigned int stringLen)
 		break;
 	    }
 	default:
-	    panic("Unsupported type in handle_string()");
+	    panic("Unsupported type in json_handle_string()");
 	}
     } else {
 	char temp[len + 1];
@@ -311,8 +267,8 @@ handle_string(void *ctx, const unsigned char *stringVal, unsigned int stringLen)
     return 1;
 }
 
-static int
-handle_start_map(void *ctx)
+int
+json_handle_start_map(void *ctx)
 {
     struct parse_context *pctx = (struct parse_context *)ctx;
     Var k, v;
@@ -323,8 +279,8 @@ handle_start_map(void *ctx)
     return 1;
 }
 
-static int
-handle_end_map(void *ctx)
+int
+json_handle_end_map(void *ctx)
 {
     struct parse_context *pctx = (struct parse_context *)ctx;
     Var map = new_map();
@@ -338,8 +294,8 @@ handle_end_map(void *ctx)
     return 1;
 }
 
-static int
-handle_start_array(void *ctx)
+int
+json_handle_start_array(void *ctx)
 {
     struct parse_context *pctx = (struct parse_context *)ctx;
     Var v;
@@ -348,8 +304,8 @@ handle_start_array(void *ctx)
     return 1;
 }
 
-static int
-handle_end_array(void *ctx)
+int
+json_handle_end_array(void *ctx)
 {
     struct parse_context *pctx = (struct parse_context *)ctx;
     Var list = new_list(0);
@@ -486,19 +442,6 @@ generate(yajl_gen g, Var v, void *ctx)
     return (yajl_gen_status)-1;
 }
 
-static yajl_callbacks callbacks = {
-    handle_null,
-    handle_boolean,
-    NULL,
-    NULL,
-    handle_number,
-    handle_string,
-    handle_start_map,
-    handle_string,
-    handle_end_map,
-    handle_start_array,
-    handle_end_array
-};
 
 /**** built in functions ****/
 
@@ -620,3 +563,4 @@ register_yajl(void)
     register_function("parse_json", 1, 2, bf_parse_json, TYPE_STR, TYPE_STR);
     register_function("generate_json", 1, 2, bf_generate_json, TYPE_ANY, TYPE_STR);
 }
+

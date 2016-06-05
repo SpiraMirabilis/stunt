@@ -32,5 +32,12 @@ extern Var do_divide(Var, Var);
 extern Var do_modulus(Var, Var);
 extern Var do_power(Var, Var);
 
+
+extern int parse_float(const char *str, double *result);
+extern int parse_number(const char *str, int *result, int try_floating_point);
+extern int parse_object(const char *str, Objid * result);
+
+
+
 extern sosemanuk_key_context key_context;
 extern sosemanuk_run_context run_context;

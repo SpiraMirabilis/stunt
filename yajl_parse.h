@@ -36,7 +36,7 @@
  */
 
 #include "yajl_common.h"
-
+#include "yajl_lex.h"
 #ifndef __YAJL_PARSE_H__
 #define __YAJL_PARSE_H__
 

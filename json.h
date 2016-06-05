@@ -26,3 +26,64 @@
   those of the authors and should not be interpreted as representing official
   policies, either expressed or implied, of Todd Sundsted.
  *****************************************************************************/
+
+#include "yajl_parse.h"
+#include "yajl_gen.h"
+
+
+struct stack_item {
+      struct stack_item *prev;
+      Var v;
+};
+
+
+// functions
+int json_handle_null(void *ctx);
+int json_handle_end_array(void *ctx);
+int json_handle_start_array(void *ctx);
+int json_handle_end_map(void *ctx);
+int json_handle_start_map(void *ctx);
+int
+json_handle_string(void *ctx, const unsigned char *stringVal, unsigned int stringLen);
+int json_handle_float(void *ctx, double doubleVal);
+int json_handle_integer(void *ctx, long integerVal);
+int json_handle_boolean(void *ctx, int boolean);
+void json_push(struct stack_item **, Var);
+Var json_pop(struct stack_item **);
+
+#define PUSH(top, v) json_push(&(top), v)
+#define POP(top) json_pop(&(top))
+
+
+
+static yajl_callbacks callbacks = {
+    json_handle_null,
+    json_handle_boolean,
+    json_handle_integer,
+    json_handle_float,
+    NULL,
+    json_handle_string,
+    json_handle_start_map,
+    json_handle_string,
+    json_handle_end_map,
+    json_handle_start_array,
+    json_handle_end_array
+};
+
+
+typedef enum {
+      MODE_COMMON_SUBSET, MODE_EMBEDDED_TYPES
+} mode_type;
+
+struct parse_context {
+   struct stack_item stack;
+   struct stack_item *top;
+   mode_type mode;
+};
+
+struct generate_context {
+      mode_type mode;
+};
+
+#define ARRAY_SENTINEL -1
+#define MAP_SENTINEL -2
